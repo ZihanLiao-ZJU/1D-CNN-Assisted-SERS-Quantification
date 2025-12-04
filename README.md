@@ -1,243 +1,257 @@
-# 1D-CNN-Assisted-SERS-Quantification
-This repository provides a complete workflow for performing quantitative regression on Raman or Surface-Enhanced Raman Spectroscopy (SERS) data using a 1D Convolutional Neural Network (1D-CNN). The workflow consists of:
+# 1D-CNN-Assisted SERS Quantification
 
-Data preparation
-Load raw Raman/SERS spectra from any MATLAB-readable file, standardize formatting, split into training/validation/test sets, and save a unified .mat file.
+This repository provides a complete MATLAB workflow for performing **quantitative regression** on Surface-Enhanced Raman Spectroscopy (SERS) data using a **1D Convolutional Neural Network (1D-CNN)**.
 
-CNN training (drive_CNN.m)
-Load the prepared .mat file, convert the inputs into dlarray format, and train the 1D-CNN.
+The workflow consists of:
 
-This README describes all required steps in detail.
+1. Data Preparation  
+2. Canonical Data Formatting  
+3. dlarray Conversion  
+4. CNN Architecture  
+5. CNN Training  
+6. Evaluation  
+7. Full Pipeline Summary  
 
-1. Data Preparation
-1.1 Acceptable Raw Data Formats
+This single document explains the entire process in a unified Markdown format.
 
-Raw spectral data may be loaded from any MATLAB-readable file, including:
+---
 
-.mat
+# 1. Data Preparation
 
-.csv, .txt
+The workflow begins with raw Raman/SERS spectral data and their corresponding target values (e.g., analyte concentrations).
 
-.xlsx
+## 1.1 Supported Input Formats
 
-Any format that can be read by readmatrix, readtable, or load
+MATLAB-readable formats:
 
-The raw data must include:
+- `.mat`
+- `.csv`, `.txt`
+- `.xlsx`
+- Any format readable by `load`, `readmatrix`, or `readtable`
 
-A spectral matrix X_raw
+The raw dataset must provide:
 
-A corresponding target vector Y_raw (e.g., analyte concentrations)
+- `X_raw` — spectral matrix  
+- `Y_raw` — target vector  
 
-Two common input layouts are supported:
+Supported layouts:
 
-Rows = spectra, columns = wavenumber points
-X_raw has size [N_samples × N_dim]
+| Layout | Dimension | Description |
+|--------|-----------|-------------|
+| Spectra in rows | `N_samples × N_dim` | Each row is a spectrum |
+| Spectra in columns | `N_dim × N_samples` | Each column is a spectrum |
 
-Columns = spectra, rows = wavenumber points
-X_raw has size [N_dim × N_samples]
+The preparation script will correct orientation automatically.
 
-The data preparation script will automatically standardize the orientation.
+---
 
-1.2 Standard Internal Format
+## 1.2 Canonical Internal Format
 
-To ensure compatibility with the CNN training script, all data are converted into a single canonical format and stored inside a .mat file.
+After standardization, data are saved into `data_CNN.mat` using the following unified format:
 
-All spectra are stored column-wise as:
+### Spectra (`N_dim × N_samples`)
 
-X_tra — training spectra, [N_dim × N_tra]
+- `X_tra` — training spectra  
+- `X_vad` — validation spectra  
+- `X_tst` — test spectra  
 
-X_vad — validation spectra, [N_dim × N_vad]
+### Targets (`1 × N_samples`)
 
-X_tst — test spectra, [N_dim × N_tst]
+- `Y_tra`  
+- `Y_vad`  
+- `Y_tst`  
 
-Target values are stored row-wise as:
+### Metadata
 
-Y_tra — [1 × N_tra]
+- `N_dim`  
+- `N_sam`  
+- `N_tra`, `N_vad`, `N_tst`  
+- optional: `len_wav` (wavenumber axis)
 
-Y_vad — [1 × N_vad]
+This file is the **only required input** for the CNN training script.
 
-Y_tst — [1 × N_tst]
+---
 
-Metadata included in the .mat file:
+# 1.3 Data Preparation Pipeline
 
-N_dim — number of wavenumber points
+### Step 1 — Load raw data  
+Use MATLAB functions such as:
 
-N_sam — total number of samples
+```
+load(...)
+readmatrix(...)
+readtable(...)
+```
 
-N_tra, N_vad, N_tst — sample counts per subset
+### Step 2 — Standardize orientation  
+Convert into:
 
-Optional:
+- Spectra: `[N_dim × N_samples]`  
+- Targets: `[1 × N_samples]`  
 
-len_wav — wavenumber axis
+### Step 3 — Randomly split dataset  
+Common ratios:
 
-1.3 Data Preparation Pipeline
+- 70% training  
+- 15% validation  
+- 15% testing  
 
-The recommended workflow is:
+### Step 4 — Save canonical dataset  
+Save:
 
-Load raw data
-Example sources include MAT, CSV, TXT, Excel, or instrument output files.
-
-Standardize orientation
-Spectra are converted into the format [N_dim × N_samples].
-Targets are converted into [1 × N_samples].
-
-Randomly split dataset
-Typical split ratios:
-
-Training: ~70%
-
-Validation: ~15%
-
-Test: ~15%
-
-Save standard dataset
-Save all variables into a single file data_CNN.mat:
-
+```
 X_tra, X_vad, X_tst
 Y_tra, Y_vad, Y_tst
 N_dim, N_sam
 N_tra, N_vad, N_tst
+```
 
+into `data_CNN.mat`.
 
-This .mat file will be the only required input for drive_CNN.m.
+---
 
-2. Data Formatting for CNN Training
-2.1 dlarray Format Requirements
+# 2. Data Formatting for CNN Training
 
-MATLAB’s trainnet requires sequential data to be passed in the dlarray format using the "CBT" layout:
+## 2.1 Required dlarray Format
 
-C — Channel dimension
+MATLAB `trainnet` requires 1D sequential input in **CBT** layout:
 
-B — Batch (sample) dimension
+- **C** — Channel  
+- **B** — Batch (samples)  
+- **T** — Time / wavenumber axis  
 
-T — Time/sequence dimension (wavenumber axis)
+Thus, the required input size is:
 
-For Raman/SERS spectra, the final input must have shape:
+```
+[1 × N_samples × N_dim]
+```
 
-[1×N_samples×N_dim]
-[1×N_samples×N_dim​]
+---
 
-2.2 Creating "CBT" dlarray Inputs
+## 2.2 Conversion Procedure
 
-Given a spectral matrix in the canonical format [N_dim × N_samples], the conversion is:
+Given canonical spectra `[N_dim × N_samples]`:
 
-Reshape to 3D [T × C × B]
+1. Reshape to `[T × C × B]`  
+2. Permute to `[C × B × T]`  
+3. Wrap as dlarray:
 
-Permute to [C × B × T]
+```
+dlarray(X_CBT, "CBT")
+```
 
-Wrap with dlarray(..., "CBT")
+`drive_CNN.m` performs all conversion automatically.
 
-This conversion is performed inside the training script automatically.
+---
 
-3. CNN Training Workflow (drive_CNN.m)
+# 3. CNN Architecture
 
-The CNN training script requires only one input:
+The 1D-CNN structure consists of:
 
-data_CNN.mat
+- Sequence input layer  
+- Repeated blocks:  
+  ```
+  Conv → BatchNorm → ReLU → MaxPooling
+  ```
+- Global average pooling  
+- Fully connected layer  
+- Regression layer  
 
+Kernel sizes and filter numbers are adjustable via parameters defined before constructing the network.
 
-which is generated in the data preparation step.
+---
 
-3.1 Loading Data
+# 4. CNN Training Workflow (drive_CNN.m)
 
-drive_CNN.m begins by loading:
+## 4.1 Loading the standardized dataset
 
+The script automatically loads:
+
+```
 X_tra, X_vad, X_tst
 Y_tra, Y_vad, Y_tst
 N_dim, N_sam
 N_tra, N_vad, N_tst
+```
 
-3.2 Converting Data to dlarray
+## 4.2 dlarray conversion
 
-All spectral matrices are converted to "CBT" dlarray format.
-Targets are converted into column-vector dlarrays.
+The script:
 
-No manual intervention is needed as long as the dataset is saved in the prescribed format.
+- Converts spectra into **CBT** dlarray format  
+- Converts targets into column-vector dlarrays  
+- Handles batching and shuffling  
 
-4. CNN Architecture
+No manual formatting is required.
 
-The model is a 1D convolutional neural network that includes:
+---
 
-A sequence input layer
+## 4.3 Training Settings
 
-A series of convolution → batch normalization → ReLU → max pooling blocks
+Training uses MATLAB `trainnet` with:
 
-A global average pooling layer
+- Loss: MSE  
+- Regularization: L2  
+- LR scheduling  
+- Validation monitoring  
 
-A fully connected feature layer
+User-editable hyperparameters include:
 
-A final regression layer
+- Batch size  
+- Maximum epochs  
+- Learning rate schedule  
+- Regularization strength  
 
-Convolution kernel sizes and number of filters are user-configurable through parameters defined before network construction.
+---
 
-5. Training and Validation
+# 5. Evaluation
 
-Training is performed using trainnet with the mean squared error loss. The script handles:
+After training, predictions are made for:
 
-Mini-batching
+- Calibration set  
+- Test set  
 
-Training/validation shuffling
+Evaluation metrics include:
 
-Learning-rate scheduling
+- Pearson correlation coefficient  
+- R²  
+- Bias  
+- RMSEP  
+- Limit of Detection (LOD), if implemented  
 
-L2 regularization
+These metrics summarize the performance of the 1D-CNN on Raman/SERS quantification.
 
-Validation monitoring
+---
 
-Hyperparameters such as batch size, maximum epochs, and learning rate schedule can be freely adjusted.
+# 6. Full End-to-End Pipeline Summary
 
-6. Evaluation
+## Step 1 — Prepare Data
+- Load raw spectra and targets  
+- Standardize orientation  
+- Split into training/validation/test  
+- Save as `data_CNN.mat`  
 
-After training:
+## Step 2 — Format for CNN
+- Convert to `[N_dim × N_samples]` format  
+- Convert to `"CBT"` dlarray (done automatically)  
 
-The training and validation sets may be merged to form a calibration set.
+## Step 3 — Train CNN
+- Run `drive_CNN.m`  
+- CNN is constructed and trained automatically  
 
-Predictions are computed for:
+## Step 4 — Evaluate Model
+- Predict concentrations  
+- Compute regression metrics  
+- Assess model performance  
 
-Calibration data
+## Step 5 — Reuse with Any Raman/SERS Dataset
+Repeat:
 
-Test data
+1. Prepare raw data  
+2. Save as `data_CNN.mat`  
+3. Train using `drive_CNN.m`  
+4. Evaluate results  
 
-A user-defined evaluation function (RegressionPlt.m) computes:
+---
 
-Pearson correlation coefficient
-
-Coefficient of determination (R²)
-
-Bias
-
-RMSEP
-
-Limit of Detection (LOD), if implemented
-
-These results quantify the regression performance of the 1D-CNN.
-
-7. Summary of the Full Pipeline
-
-Prepare data
-
-Load raw Raman/SERS spectra (X_raw) and target values (Y_raw)
-
-Standardize formatting
-
-Split into training/validation/testing sets
-
-Save everything into data_CNN.mat
-
-Train CNN
-
-Run drive_CNN.m
-
-Data are automatically converted into dlarray format
-
-1D-CNN is trained using the specified network parameters and hyperparameters
-
-Evaluate model
-
-Generate predictions on test and calibration datasets
-
-Compute regression statistics
-
-Analyze CNN performance for Raman/SERS quantification tasks
-
-This workflow allows seamless reuse with any Raman/SERS dataset that MATLAB can load, ensuring consistent preprocessing and CNN training procedures.
+# End of README.md
