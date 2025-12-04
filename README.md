@@ -253,5 +253,3 @@ Repeat:
 4. Evaluate results  
 
 ---
-
-# End of README.md
