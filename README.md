@@ -92,9 +92,9 @@ Convert into:
 ### Step 3 — Randomly split dataset  
 Common ratios:
 
-- 70% training  
-- 15% validation  
-- 15% testing  
+- 60% training  
+- 20% validation  
+- 20% testing  
 
 ### Step 4 — Save canonical dataset  
 Save:
