@@ -47,7 +47,8 @@ BIAS(1)  = mean((Y_tra_pre - Y_tra));
 % LOD based on predicted responses of blank calibration samples
 ind_blk   = (Y_tra == 0);         % Indices of blank samples
 Y_pre_blk = Y_tra_pre(ind_blk);   % Predicted values for blanks
-LOD(1)    = 3*std(Y_pre_blk)/A;
+% LOD(1)    = 3*std(Y_pre_blk)/A;
+LOD(1)    = 3*std(Y_pre_blk);
 
 %% Test set: performance metrics
 % Compute R² and Pearson correlation coefficient for the test set
@@ -114,5 +115,7 @@ BIAS(2)  = mean((Y_tst_pre - Y_tst));
 % LOD based on predicted responses of blank test samples
 ind_blk   = (Y_tst == 0);          % Indices of blank samples
 Y_pre_blk = Y_tst_pre(ind_blk);    % Predicted values for blanks
-LOD(2)    = 3*std(Y_pre_blk)/A;
+% LOD(2)    = 3*std(Y_pre_blk)/A;
+LOD(2)    = 3*std(Y_pre_blk);
 end
+
