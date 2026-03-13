@@ -244,12 +244,25 @@ These metrics summarize the performance of the 1D-CNN on Raman/SERS quantificati
 - Compute regression metrics  
 - Assess model performance  
 
-## Step 5 — Reuse with Any Raman/SERS Dataset
-Repeat:
-
-1. Prepare raw data  
-2. Save as `data_CNN.mat`  
-3. Train using `drive_CNN.m`  
-4. Evaluate results  
-
 ---
+
+## Citation
+
+If you use this code in your research, please cite the following work:
+
+Guo, L., Liao, Z., & Yang, T. (2025).  
+**Overcoming Surface Irregularities-Induced Large Signal Variation in In Situ SERS via Tailored 1D-CNN for Accurate Quantification on Biological Tissues.**  
+ChemRxiv.  
+https://doi.org/10.26434/chemrxiv-2025-wpj08
+
+### BibTeX
+
+```bibtex
+@article{guo2025serscnn,
+  title   = {Overcoming Surface Irregularities-Induced Large Signal Variation in In Situ SERS via Tailored 1D-CNN for Accurate Quantification on Biological Tissues},
+  author  = {Guo, Ling and Liao, Zihan and Yang, Tianxi},
+  journal = {ChemRxiv},
+  year    = {2025},
+  doi     = {10.26434/chemrxiv-2025-wpj08},
+  url     = {https://doi.org/10.26434/chemrxiv-2025-wpj08}
+}
