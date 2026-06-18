@@ -250,10 +250,13 @@ These metrics summarize the performance of the 1D-CNN on Raman/SERS quantificati
 
 If you use this code in your research, please cite the following work:
 
-Guo, L., Liao, Z., & Yang, T. (2025).  
-**Overcoming Surface Irregularities-Induced Large Signal Variation in In Situ SERS via Tailored 1D-CNN for Accurate Quantification on Biological Tissues.**  
-ChemRxiv.  
-https://doi.org/10.26434/chemrxiv-2025-wpj08
+@article{guo2026tailored,
+  title={Tailored Deep Learning--Assisted In Situ SERS: Overcoming Surface Irregularities-Induced Large Signal Variation on Biological Tissues},
+  author={Guo, Ling and Liao, Zihan and Yang, Tianxi},
+  journal={Analytical Chemistry},
+  year={2026},
+  publisher={ACS Publications}
+}
 
 ### BibTeX
 
