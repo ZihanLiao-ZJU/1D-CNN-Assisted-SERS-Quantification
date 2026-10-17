@@ -1,265 +1,128 @@
 # 1D-CNN-Assisted SERS Quantification
 
-This repository provides a complete MATLAB workflow for performing **quantitative regression** on Surface-Enhanced Raman Spectroscopy (SERS) data using a **1D Convolutional Neural Network (1D-CNN)**.
+MATLAB code for quantitative regression of Surface-Enhanced Raman Spectroscopy (SERS) spectra with a one-dimensional convolutional neural network (1D-CNN). Given a set of spectra and their target values (e.g., analyte concentrations), the script trains a 1D-CNN regressor and reports calibration and test-set performance.
 
-The workflow consists of:
+## Contents
 
-1. Data Preparation  
-2. Canonical Data Formatting  
-3. dlarray Conversion  
-4. CNN Architecture  
-5. CNN Training  
-6. Evaluation  
-7. Full Pipeline Summary  
+- [Requirements](#requirements)
+- [Repository structure](#repository-structure)
+- [Quick start](#quick-start)
+- [Input data format](#input-data-format)
+- [Network architecture](#network-architecture)
+- [Training settings](#training-settings)
+- [Evaluation](#evaluation)
+- [Citation](#citation)
+- [License](#license)
 
-This single document explains the entire process in a unified Markdown format.
+## Requirements
 
----
+- MATLAB R2023b or later (the script uses `trainnet`)
+- Deep Learning Toolbox
+- Statistics and Machine Learning Toolbox (`corr`, `fitlm`)
 
-# 1. Data Preparation
-
-The workflow begins with raw Raman/SERS spectral data and their corresponding target values (e.g., analyte concentrations).
-
-## 1.1 Supported Input Formats
-
-MATLAB-readable formats:
-
-- `.mat`
-- `.csv`, `.txt`
-- `.xlsx`
-- Any format readable by `load`, `readmatrix`, or `readtable`
-
-The raw dataset must provide:
-
-- `X_raw` — spectral matrix  
-- `Y_raw` — target vector  
-
-Supported layouts:
-
-| Layout | Dimension | Description |
-|--------|-----------|-------------|
-| Spectra in rows | `N_samples × N_dim` | Each row is a spectrum |
-| Spectra in columns | `N_dim × N_samples` | Each column is a spectrum |
-
-The preparation script will correct orientation automatically.
-
----
-
-## 1.2 Canonical Internal Format
-
-After standardization, data are saved into `data_CNN.mat` using the following unified format:
-
-### Spectra (`N_dim × N_samples`)
-
-- `X_tra` — training spectra  
-- `X_vad` — validation spectra  
-- `X_tst` — test spectra  
-
-### Targets (`1 × N_samples`)
-
-- `Y_tra`  
-- `Y_vad`  
-- `Y_tst`  
-
-### Metadata
-
-- `N_dim`  
-- `N_sam`  
-- `N_tra`, `N_vad`, `N_tst`  
-- optional: `len_wav` (wavenumber axis)
-
-This file is the **only required input** for the CNN training script.
-
----
-
-# 1.3 Data Preparation Pipeline
-
-### Step 1 — Load raw data  
-Use MATLAB functions such as:
+## Repository structure
 
 ```
-load(...)
-readmatrix(...)
-readtable(...)
+.
+├── drive_CNN.m       % main script: data formatting, network definition, training, evaluation
+├── RegressionPlt.m   % regression metrics and calibration / test-set plots
+├── LICENSE
+└── README.md
 ```
 
-### Step 2 — Standardize orientation  
-Convert into:
+## Quick start
 
-- Spectra: `[N_dim × N_samples]`  
-- Targets: `[1 × N_samples]`  
+1. Prepare a MAT-file named `data_CNN.mat` in the format described below (no dataset is included in this repository).
+2. Place it in the repository folder and run:
 
-### Step 3 — Randomly split dataset  
-Common ratios:
-
-- 60% training  
-- 20% validation  
-- 20% testing  
-
-### Step 4 — Save canonical dataset  
-Save:
-
-```
-X_tra, X_vad, X_tst
-Y_tra, Y_vad, Y_tst
-N_dim, N_sam
-N_tra, N_vad, N_tst
+```matlab
+>> drive_CNN
 ```
 
-into `data_CNN.mat`.
+The script trains the network, prints the training time, and opens two figures (calibration set and test set). The metrics `rho`, `R2`, `BIAS`, `RMSEP` and `LOD` are left in the workspace.
 
----
+## Input data format
 
-# 2. Data Formatting for CNN Training
+`drive_CNN.m` loads `data_CNN.mat`, which must contain the following variables. Each column of `X_*` is one spectrum and each row is one wavenumber position.
 
-## 2.1 Required dlarray Format
+| Variable | Size | Description |
+|---|---|---|
+| `X_tra` | `N_dim × N_tra` | training spectra |
+| `X_vad` | `N_dim × N_vad` | validation spectra |
+| `X_tst` | `N_dim × N_tst` | test spectra |
+| `Y_tra` | `1 × N_tra` | training targets |
+| `Y_vad` | `1 × N_vad` | validation targets |
+| `Y_tst` | `1 × N_tst` | test targets |
+| `N_dim` | scalar | number of wavenumber points |
+| `N_sam` | scalar | total number of spectra |
+| `N_tra`, `N_vad`, `N_tst` | scalar | number of training / validation / test spectra |
 
-MATLAB `trainnet` requires 1D sequential input in **CBT** layout:
+Splitting the raw data into training, validation and test sets is left to the user.
 
-- **C** — Channel  
-- **B** — Batch (samples)  
-- **T** — Time / wavenumber axis  
+Inside the script, the spectra are reshaped and wrapped as `dlarray` objects with the `"CBT"` layout (channel × batch × spectral axis), as required by `trainnet` for 1D sequence input. If your spectra are stored in a different layout (spectra in rows, multi-channel, batch-first), the comment block *Templates for other data layouts* in `drive_CNN.m` shows the corresponding reshape/permute steps.
 
-Thus, the required input size is:
-
-```
-[1 × N_samples × N_dim]
-```
-
----
-
-## 2.2 Conversion Procedure
-
-Given canonical spectra `[N_dim × N_samples]`:
-
-1. Reshape to `[T × C × B]`  
-2. Permute to `[C × B × T]`  
-3. Wrap as dlarray:
+## Network architecture
 
 ```
-dlarray(X_CBT, "CBT")
+sequenceInputLayer(1)
+4 × [ convolution1dLayer → batchNormalizationLayer → reluLayer → maxPooling1dLayer(2, stride 2) ]
+globalAveragePooling1dLayer
+fullyConnectedLayer(featureDim) → reluLayer
+fullyConnectedLayer(1)
 ```
 
-`drive_CNN.m` performs all conversion automatically.
+The block parameters are set near the top of `drive_CNN.m`:
 
----
+| Parameter | Default | Meaning |
+|---|---|---|
+| `kernelSizes` | `[57, 37, 11, 3]` | kernel size of each convolutional block |
+| `numFilters` | `[8, 16, 32, 32]` | number of filters of each convolutional block |
+| `featureDim` | `8` | size of the latent feature layer |
 
-# 3. CNN Architecture
+## Training settings
 
-The 1D-CNN structure consists of:
+The network is trained with `trainnet` using the mean-squared-error loss and the Adam optimizer:
 
-- Sequence input layer  
-- Repeated blocks:  
-  ```
-  Conv → BatchNorm → ReLU → MaxPooling
-  ```
-- Global average pooling  
-- Fully connected layer  
-- Regression layer  
+| Option | Value |
+|---|---|
+| Mini-batch size | 32 |
+| Max epochs | 500 |
+| Shuffle | every epoch |
+| Initial learning rate | 1e-3 |
+| Learning-rate schedule | piecewise, drop factor 0.5 every 500 epochs |
+| L2 regularization | 1e-4 |
+| Validation | `X_vad`, `Y_vad`, evaluated once per epoch |
 
-Kernel sizes and filter numbers are adjustable via parameters defined before constructing the network.
+## Evaluation
 
----
+After training, the training and validation sets are combined into a calibration set, and predictions are made for the calibration and test sets. `RegressionPlt.m` computes, for each set (index 1 = calibration, 2 = test):
 
-# 4. CNN Training Workflow (drive_CNN.m)
+| Output | Definition |
+|---|---|
+| `rho` | Pearson correlation coefficient between actual and predicted values |
+| `R2` | coefficient of determination |
+| `BIAS` | mean of (predicted − actual) |
+| `RMSEP` | root-mean-square error of prediction |
+| `LOD` | 3 × standard deviation of the predictions for blank samples (target = 0) |
 
-## 4.1 Loading the standardized dataset
-
-The script automatically loads:
-
-```
-X_tra, X_vad, X_tst
-Y_tra, Y_vad, Y_tst
-N_dim, N_sam
-N_tra, N_vad, N_tst
-```
-
-## 4.2 dlarray conversion
-
-The script:
-
-- Converts spectra into **CBT** dlarray format  
-- Converts targets into column-vector dlarrays  
-- Handles batching and shuffling  
-
-No manual formatting is required.
-
----
-
-## 4.3 Training Settings
-
-Training uses MATLAB `trainnet` with:
-
-- Loss: MSE  
-- Regularization: L2  
-- LR scheduling  
-- Validation monitoring  
-
-User-editable hyperparameters include:
-
-- Batch size  
-- Maximum epochs  
-- Learning rate schedule  
-- Regularization strength  
-
----
-
-# 5. Evaluation
-
-After training, predictions are made for:
-
-- Calibration set  
-- Test set  
-
-Evaluation metrics include:
-
-- Pearson correlation coefficient  
-- R²  
-- Bias  
-- RMSEP  
-- Limit of Detection (LOD), if implemented  
-
-These metrics summarize the performance of the 1D-CNN on Raman/SERS quantification.
-
----
-
-# 6. Full End-to-End Pipeline Summary
-
-## Step 1 — Prepare Data
-- Load raw spectra and targets  
-- Standardize orientation  
-- Split into training/validation/test  
-- Save as `data_CNN.mat`  
-
-## Step 2 — Format for CNN
-- Convert to `[N_dim × N_samples]` format  
-- Convert to `"CBT"` dlarray (done automatically)  
-
-## Step 3 — Train CNN
-- Run `drive_CNN.m`  
-- CNN is constructed and trained automatically  
-
-## Step 4 — Evaluate Model
-- Predict concentrations  
-- Compute regression metrics  
-- Assess model performance  
-
----
+It also plots the calibration scatter and the test-set regression line with 95% confidence and prediction intervals. Axis labels assume concentrations in µg/mL.
 
 ## Citation
 
-If you use this code in your research, please cite the following work:
+If you use this code in your research, please cite:
 
-Guo, L., Liao, Z., & Yang, T. (2026). Tailored Deep Learning–Assisted In Situ SERS: Overcoming Surface Irregularities-Induced Large Signal Variation on Biological Tissues. Analytical Chemistry.
-
-### BibTeX
+> Guo, L., Liao, Z., & Yang, T. (2026). Tailored Deep Learning–Assisted In Situ SERS: Overcoming Surface Irregularities-Induced Large Signal Variation on Biological Tissues. *Analytical Chemistry*.
 
 ```bibtex
-
 @article{guo2026tailored,
-  title={Tailored Deep Learning--Assisted In Situ SERS: Overcoming Surface Irregularities-Induced Large Signal Variation on Biological Tissues},
-  author={Guo, Ling and Liao, Zihan and Yang, Tianxi},
-  journal={Analytical Chemistry},
-  year={2026},
-  publisher={ACS Publications}
+  title     = {Tailored Deep Learning--Assisted In Situ SERS: Overcoming Surface Irregularities-Induced Large Signal Variation on Biological Tissues},
+  author    = {Guo, Ling and Liao, Zihan and Yang, Tianxi},
+  journal   = {Analytical Chemistry},
+  year      = {2026},
+  publisher = {ACS Publications}
 }
+```
+
+## License
+
+This project is licensed under the MIT License. See [LICENSE](./LICENSE) for details.
