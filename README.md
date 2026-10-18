@@ -2,6 +2,11 @@
 
 MATLAB code for quantitative regression of Surface-Enhanced Raman Spectroscopy (SERS) spectra with a one-dimensional convolutional neural network (1D-CNN). Given a set of spectra and their target values (e.g., analyte concentrations), the script trains a 1D-CNN regressor and reports calibration and test-set performance.
 
+This code accompanies the paper:
+
+> **Tailored Deep Learning–Assisted In Situ SERS: Overcoming Surface Irregularities-Induced Large Signal Variation on Biological Tissues.**
+> *Analytical Chemistry*, 98(25) (2026) 18645–18659. doi: [10.1021/acs.analchem.6c01156](https://doi.org/10.1021/acs.analchem.6c01156)
+
 ## Contents
 
 - [Requirements](#requirements)
@@ -111,15 +116,18 @@ It also plots the calibration scatter and the test-set regression line with 95% 
 
 If you use this code in your research, please cite:
 
-> Guo, L., Liao, Z., & Yang, T. (2026). Tailored Deep Learning–Assisted In Situ SERS: Overcoming Surface Irregularities-Induced Large Signal Variation on Biological Tissues. *Analytical Chemistry*.
+> Guo, L., Liao, Z., & Yang, T. (2026). Tailored Deep Learning–Assisted In Situ SERS: Overcoming Surface Irregularities-Induced Large Signal Variation on Biological Tissues. *Analytical Chemistry*, 98(25), 18645–18659. https://doi.org/10.1021/acs.analchem.6c01156
 
 ```bibtex
 @article{guo2026tailored,
-  title     = {Tailored Deep Learning--Assisted In Situ SERS: Overcoming Surface Irregularities-Induced Large Signal Variation on Biological Tissues},
-  author    = {Guo, Ling and Liao, Zihan and Yang, Tianxi},
-  journal   = {Analytical Chemistry},
-  year      = {2026},
-  publisher = {ACS Publications}
+  title   = {Tailored Deep Learning--Assisted In Situ {SERS}: Overcoming Surface Irregularities-Induced Large Signal Variation on Biological Tissues},
+  author  = {Guo, Ling and Liao, Zihan and Yang, Tianxi},
+  journal = {Analytical Chemistry},
+  volume  = {98},
+  number  = {25},
+  pages   = {18645--18659},
+  year    = {2026},
+  doi     = {10.1021/acs.analchem.6c01156}
 }
 ```
 
