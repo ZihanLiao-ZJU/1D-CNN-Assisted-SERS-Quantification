@@ -1,6 +1,6 @@
 # 1D-CNN-Assisted SERS Quantification
 
-MATLAB code for quantitative regression of Surface-Enhanced Raman Spectroscopy (SERS) spectra with a one-dimensional convolutional neural network (1D-CNN). Given a set of spectra and their target values (e.g., analyte concentrations), the script trains a 1D-CNN regressor and reports calibration and test-set performance.
+MATLAB code for quantitative regression of Surface-Enhanced Raman Spectroscopy (SERS) spectra with a one-dimensional convolutional neural network (1D-CNN).
 
 This code accompanies the paper:
 
@@ -9,15 +9,20 @@ This code accompanies the paper:
 
 ## Contents
 
+- [Overview](#overview)
 - [Requirements](#requirements)
 - [Repository structure](#repository-structure)
 - [Quick start](#quick-start)
 - [Input data format](#input-data-format)
 - [Network architecture](#network-architecture)
 - [Training settings](#training-settings)
-- [Evaluation](#evaluation)
+- [Outputs](#outputs)
 - [Citation](#citation)
 - [License](#license)
+
+## Overview
+
+Given a set of spectra and their target values (e.g., analyte concentrations), the script trains a 1D-CNN regressor and reports calibration and test-set performance.
 
 ## Requirements
 
@@ -27,7 +32,7 @@ This code accompanies the paper:
 
 ## Repository structure
 
-```
+```text
 .
 ├── drive_CNN.m       % main script: data formatting, network definition, training, evaluation
 ├── RegressionPlt.m   % regression metrics and calibration / test-set plots
@@ -41,7 +46,7 @@ This code accompanies the paper:
 2. Place it in the repository folder and run:
 
 ```matlab
->> drive_CNN
+drive_CNN
 ```
 
 The script trains the network, prints the training time, and opens two figures (calibration set and test set). The metrics `rho`, `R2`, `BIAS`, `RMSEP` and `LOD` are left in the workspace.
@@ -68,7 +73,7 @@ Inside the script, the spectra are reshaped and wrapped as `dlarray` objects wit
 
 ## Network architecture
 
-```
+```text
 sequenceInputLayer(1)
 4 × [ convolution1dLayer → batchNormalizationLayer → reluLayer → maxPooling1dLayer(2, stride 2) ]
 globalAveragePooling1dLayer
@@ -98,7 +103,7 @@ The network is trained with `trainnet` using the mean-squared-error loss and the
 | L2 regularization | 1e-4 |
 | Validation | `X_vad`, `Y_vad`, evaluated once per epoch |
 
-## Evaluation
+## Outputs
 
 After training, the training and validation sets are combined into a calibration set, and predictions are made for the calibration and test sets. `RegressionPlt.m` computes, for each set (index 1 = calibration, 2 = test):
 
